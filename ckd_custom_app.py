@@ -1,3 +1,14 @@
+import pickle
+from pathlib import Path
+MODEL_PATH = Path(__file__).parent / "ckd_model.pkl"
+try:
+    with open(MODEL_PATH, "rb") as f:
+        model = pickle.load(f)
+except Exception as e:
+    model = None
+    st.warning(f"ML model not available: {e}")
+
+
 import streamlit as st
 from PIL import Image
 from datetime import datetime, timedelta, date
