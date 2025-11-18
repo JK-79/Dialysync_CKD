@@ -1,3 +1,4 @@
+import streamlit as st
 import pickle
 from pathlib import Path
 MODEL_PATH = Path(__file__).parent / "ckd_model.pkl"
@@ -7,6 +8,7 @@ try:
 except Exception as e:
     model = None
     st.warning(f"ML model not available: {e}")
+
 
 
 import streamlit as st
