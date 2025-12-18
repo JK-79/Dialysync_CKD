@@ -140,4 +140,18 @@ def homepage():
     c1, c2, c3 = st.columns(3)
     c1.button("📊 Reports", use_container_width=True)
     c2.button("🍽️ Food diary", use_container_width=True)
-    c3.button("💊 Medications",
+    c3.button("💊 Medications", use_container_width=True)
+
+# ---------- Layout & routing ----------
+st.set_page_config(page_title="DialySync CKD", page_icon="🩸", layout="wide")
+
+st.title("🩸 DialySync CKD")
+mood_calendar()
+st.markdown("---")
+
+if st.session_state["page"] == "welcome" or st.session_state["user_type"] is None:
+    welcome_screen()
+elif st.session_state["page"] == "mood_selector":
+    mood_selector()
+else:
+    homepage()
