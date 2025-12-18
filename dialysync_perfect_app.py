@@ -16,7 +16,7 @@ def safe_img(fn, width=90, caption=None):
     url = f"https://raw.githubusercontent.com/JK-79/Dialysync_CKD/main/{fn}"
     return st.image(url, width=width, caption=caption)
 
-# ---------- ML model (optional) ----------
+# ---------- (optional) ML model ----------
 MODEL_PATH = Path(__file__).parent / "ckd_model.pkl"
 model = None
 try:
@@ -53,18 +53,23 @@ def init_state():
 
 init_state()
 
-# ---------- Mood calendar (wide, under title) ----------
+# ---------- Mood calendar (emoji from history) ----------
 def mood_calendar():
     st.markdown("## 📅 Mood Calendar")
     today = date.today()
     year = st.selectbox("Year:", [today.year - 1, today.year, today.year + 1], key="year_sel")
 
-    hist = st.session_state["mood_history"]
-    mood_map = {(e["date"].year, e["date"].month, e["date"].day): e["emoji"] for e in hist}
+    # build map (year, month, day) -> emoji actually logged
+    mood_map = {}
+    for entry in st.session_state["mood_history"]:
+        d = entry["date"]
+        if d.year == year:
+            mood_map[(d.year, d.month, d.day)] = entry["emoji"]
 
     month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
+    # 3 months per row
     for row_start in range(0, 12, 3):
         cols = st.columns(3)
         for i in range(3):
@@ -125,7 +130,7 @@ def homepage():
     current = get_mood_by_id(st.session_state["mood"])
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.metric("Mood", current["emoji"])
+        st.metric("Mood today", current["emoji"])
     with c2:
         st.metric("Moods logged", len(st.session_state["mood_history"]))
     with c3:
@@ -135,18 +140,4 @@ def homepage():
     c1, c2, c3 = st.columns(3)
     c1.button("📊 Reports", use_container_width=True)
     c2.button("🍽️ Food diary", use_container_width=True)
-    c3.button("💊 Medications", use_container_width=True)
-
-# ---------- Layout & routing ----------
-st.set_page_config(page_title="DialySync CKD", page_icon="🩸", layout="wide")
-
-st.title("🩸 DialySync CKD")
-mood_calendar()
-st.markdown("---")
-
-if st.session_state["page"] == "welcome" or st.session_state["user_type"] is None:
-    welcome_screen()
-elif st.session_state["page"] == "mood_selector":
-    mood_selector()
-else:
-    homepage()
+    c3.button("💊 Medications",
