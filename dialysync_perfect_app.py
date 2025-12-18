@@ -1,7 +1,7 @@
 import streamlit as st
 from datetime import date
 from pathlib import Path
-import pickle, os
+import pickle, os, calendar
 
 # ---------- Image helpers ----------
 IMG_PATH = lambda fn: os.path.join(os.path.dirname(__file__), fn)
@@ -11,7 +11,7 @@ def safe_img(fn, width=90, caption=None):
     if os.path.exists(local_path):
         try:
             return st.image(local_path, width=width, caption=caption)
-        except:
+        except Exception:
             pass
     url = f"https://raw.githubusercontent.com/JK-79/Dialysync_CKD/main/{fn}"
     return st.image(url, width=width, caption=caption)
@@ -53,40 +53,50 @@ def init_state():
 
 init_state()
 
-# ---------- Mood calendar (emoji from history) ----------
+# ---------- Mood calendar (full month + selectors) ----------
 def mood_calendar():
     st.markdown("## 📅 Mood Calendar")
     today = date.today()
-    year = st.selectbox("Year:", [today.year - 1, today.year, today.year + 1], key="year_sel")
+    c1, c2 = st.columns(2)
+    with c1:
+        year = st.selectbox(
+            "Year:",
+            [today.year - 1, today.year, today.year + 1],
+            index=1,
+            key="cal_year",
+        )
+    with c2:
+        month = st.selectbox(
+            "Month:",
+            list(range(1, 13)),
+            format_func=lambda m: calendar.month_name[m],
+            index=today.month - 1,
+            key="cal_month",
+        )
 
-    # build map (year, month, day) -> emoji actually logged
+    # Map (year, month, day) -> emoji from stored moods
     mood_map = {}
     for entry in st.session_state["mood_history"]:
         d = entry["date"]
-        if d.year == year:
-            mood_map[(d.year, d.month, d.day)] = entry["emoji"]
+        mood_map[(d.year, d.month, d.day)] = entry["emoji"]
 
-    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    st.markdown(f"### {calendar.month_name[month]} {year}")
 
-    # 3 months per row
-    for row_start in range(0, 12, 3):
-        cols = st.columns(3)
-        for i in range(3):
-            m_idx = row_start + i
-            if m_idx >= 12:
-                break
-            with cols[i]:
-                st.markdown(f"**{month_names[m_idx]} {year}**")
-                lines = []
-                for day in range(1, 11):  # preview first 10 days
-                    try:
-                        _ = date(year, m_idx + 1, day)
-                        emoji = mood_map.get((year, m_idx + 1, day), "⚪")
-                        lines.append(f"{day}: {emoji}")
-                    except ValueError:
-                        pass
-                st.markdown("<br>".join(lines), unsafe_allow_html=True)
+    # Draw calendar grid
+    week_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    header_cols = st.columns(7)
+    for i, name in enumerate(week_names):
+        header_cols[i].markdown(f"**{name}**")
+
+    cal = calendar.monthcalendar(year, month)
+    for week in cal:
+        cols = st.columns(7)
+        for i, day in enumerate(week):
+            if day == 0:
+                cols[i].markdown(" ")
+            else:
+                emoji = mood_map.get((year, month, day), "⚪")
+                cols[i].markdown(f"{day} {emoji}")
 
 # ---------- Screens ----------
 def welcome_screen():
@@ -110,16 +120,28 @@ def mood_selector():
     st.markdown(f"## {st.session_state['user_type']} – how do you feel today?")
     safe_img("mood_banner.png", width=260)
 
+    # Let user choose which date this mood applies to
+    selected_date = st.date_input(
+        "Select the date you are logging mood for:",
+        value=date.today(),
+        key="mood_log_date",
+    )
+
+    st.markdown("#### Choose your mood:")
     cols = st.columns(3)
     for i, m in enumerate(MOODS):
         with cols[i % 3]:
             safe_img(m["img"], width=90)
             st.markdown(f"### {m['emoji']}")
             st.caption(m["desc"])
-            if st.button(f"Select {m['desc']}", key=f"mood_{m['id']}", use_container_width=True):
+            if st.button(
+                f"Select {m['desc']}",
+                key=f"mood_{m['id']}",
+                use_container_width=True,
+            ):
                 st.session_state["mood"] = m["id"]
                 st.session_state["mood_history"].append(
-                    {"date": date.today(), "mood": m["id"], "emoji": m["emoji"]}
+                    {"date": selected_date, "mood": m["id"], "emoji": m["emoji"]}
                 )
                 st.session_state["page"] = "home"
 
